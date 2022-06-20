@@ -4,12 +4,14 @@ import input
 
 data, line = [], []
 not_valid_values = []
+recurring = {}
 
 
 def load_price(filename, sheetname):
     """ Загружаем входящий прайс для обработки """
     global sheet_in
     book_in = load_workbook(filename=filename, data_only=True)
+    print(book_in.sheetnames)
     sheet_in = book_in[sheetname]
 
 
@@ -22,15 +24,21 @@ def info(sheet):
     print('...')
     print(sheet.max_row, 'строк')
 
-    # Статистика
-    print('\n', '-' * 20, 'Статистика', '-' * 20, '\n')
-    if not_valid_values: print(len(not_valid_values), 'невалидных строк')
-
     # Список невалидных строк
     if not_valid_values:
-        print('\n', '-' * 14, 'Список невалидных строк', '-' * 14, '\n')
+        print('\n', '-' * 10, 'Список строк с неверными данными ', '-' * 10, '\n')
         [print(i) for i in not_valid_values]
+        print('...')
+        print(len(not_valid_values), 'строк')
 
+    # Список дублированных строк
+    if sum(recurring.values()) > 0:
+        print('\n', '-' * 14, 'Строки с дублированными артикулами', '-' * 14, '\n')
+    for art, count in recurring.items():
+        if count > 0:
+            print(art, '...', count, 'дублей')
+    print('...')
+    print(sum(recurring.values()), 'строк')
 
 def make_book(articul, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
@@ -40,15 +48,24 @@ def make_book(articul, title, price, price_dis, type_dis):
 
 
 def clear_data(data):
-    global not_valid_values
     for row in data[:]:
         _clear_articul_cell(row)
         _clear_price_cell(row)
         _clear_price_dis_cell(row)
-        _del_recurring_values(row)
-        if not is_valid():
-            not_valid_values += [row]
-            data.remove(row)
+        _remove_invalid_values(row)
+
+
+def _remove_invalid_values(row):
+    global not_valid_values
+    global recurring
+    if not _is_valid():
+        not_valid_values += [row]
+        data.remove(row)
+    elif row[0] in recurring.keys():
+        recurring[row[0]] += 1
+        data.remove(row)
+    else:
+        recurring[row[0]] = 0
 
 
 def _clear_articul_cell(row):
@@ -87,11 +104,9 @@ def _clear_price_dis_cell(row):
         row[4] = 'Акция'
 
 
-def _del_recurring_values(row):
-    pass
 
 
-def is_valid():
+def _is_valid():
     """ Валидация данных в необходимых для загрузки ячейках """
     return all((articul_is_valid, price_is_valid))
 
@@ -123,11 +138,11 @@ def _make_table_view(sheet):
 
 
 # Укажите расположение прайса и название рабочего листа
-load_price(input.filename, input.sheetname)
+load_price(input.filename_in, input.sheetname)
 # Укажите номера колонок с соответствующими данными в загружаемом документе
 make_book(input.articul, input.title, input.price, input.price_dis, input.type_dis)
 clear_data(data)
 # Укажите название создаваемого прайса
-write_data_to_file(input.filename, data=data)
+write_data_to_file(input.filename_out, data)
 # Просмотр информации:
-info(sheet=sheet_in)
+info(sheet_in)
