@@ -1,3 +1,5 @@
+from random import randint
+
 from openpyxl import load_workbook, Workbook
 from itertools import chain
 import input
@@ -19,7 +21,7 @@ def info(sheet):
     """ Информация о данных в переданном листе """
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
-    for row in sheet.iter_rows(min_row=0, max_row=6, max_col=5, values_only=True):
+    for row in sheet.iter_rows(min_row=0, max_row=8, max_col=8, values_only=True):
         print(row)
     print('...')
     print(sheet.max_row, 'строк')
@@ -27,18 +29,19 @@ def info(sheet):
     # Список невалидных строк
     if not_valid_values:
         print('\n', '-' * 10, 'Список строк с неверными данными ', '-' * 10, '\n')
-        [print(i) for i in not_valid_values]
+        for i in range(min(8, len(not_valid_values))):
+            print(not_valid_values[randint(0, len(not_valid_values)-1)])
         print('...')
         print(len(not_valid_values), 'строк')
 
     # Список дублированных строк
     if sum(recurring.values()) > 0:
         print('\n', '-' * 14, 'Строки с дублированными артикулами', '-' * 14, '\n')
-    for art, count in recurring.items():
-        if count > 0:
-            print(art, '...', count, 'дублей')
-    print('...')
-    print(sum(recurring.values()), 'строк')
+        for art, count in recurring.items():
+            if count > 0:
+                print(art, '...', count, 'дублей')
+        print('...')
+        print(sum(recurring.values()), 'строк')
 
 def make_book(articul, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
@@ -74,6 +77,9 @@ def _clear_articul_cell(row):
     articul_is_valid = False
     if isinstance(row[0], str):
         row[0] = row[0].strip()
+        articul_is_valid = True
+    elif isinstance(row[0], int | float):
+        row[0] = int(row[0])
         articul_is_valid = True
 
 
