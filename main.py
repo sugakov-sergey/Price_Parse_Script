@@ -123,11 +123,11 @@ def _make_table_view(sheet):
 
 
 # Укажите расположение прайса и название рабочего листа
-load_price(filename='aquabiz.xlsx',
-           sheetname='ПРАЙС ABBER и GEMY')
+load_price(input.filename, input.sheetname)
 # Укажите номера колонок с соответствующими данными в загружаемом документе
 make_book(input.articul, input.title, input.price, input.price_dis, input.type_dis)
 clear_data(data)
 # Укажите название создаваемого прайса
 write_data_to_file(input.filename, data=data)
+# Просмотр информации:
 info(sheet=sheet_in)
