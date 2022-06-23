@@ -2,6 +2,7 @@ from random import randint
 
 from openpyxl import load_workbook, Workbook
 from itertools import chain
+
 import input
 
 data, line = [], []
@@ -21,7 +22,7 @@ def info(sheet):
     """ Информация о данных в переданном листе """
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
-    for row in sheet.iter_rows(min_row=0, max_row=8, max_col=8, values_only=True):
+    for row in sheet.iter_rows(min_row=0, max_row=30, max_col=8, values_only=True):
         print(row)
     print('...')
     print(sheet.max_row, 'строк')
@@ -30,7 +31,7 @@ def info(sheet):
     if not_valid_values:
         print('\n', '-' * 10, 'Список строк с неверными данными ', '-' * 10, '\n')
         for i in range(min(8, len(not_valid_values))):
-            print(not_valid_values[randint(0, len(not_valid_values)-1)])
+            print(not_valid_values[randint(0, len(not_valid_values) - 1)])
         print('...')
         print(len(not_valid_values), 'строк')
 
@@ -42,6 +43,7 @@ def info(sheet):
                 print(art, '...', count, 'дублей')
         print('...')
         print(sum(recurring.values()), 'строк')
+
 
 def make_book(articul, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
@@ -91,8 +93,9 @@ def _clear_price_cell(row):
         if set(row[2]) <= set('0123456789., '):
             row[2] = row[2].strip().replace(',', '.').replace(' ', '')
             row[2] = round(float(row[2]), 2)
-            price_is_valid = True
-    elif isinstance(row[2], float | int):
+            if row[2] > 0:
+                price_is_valid = True
+    elif isinstance(row[2], float | int) and row[2] > 0:
         row[2] = round(float(row[2]), 2)
         price_is_valid = True
 
@@ -108,8 +111,6 @@ def _clear_price_dis_cell(row):
         elif isinstance(row[3], float | int):
             row[3] = round(float(row[3]), 2)
         row[4] = 'Акция'
-
-
 
 
 def _is_valid():
