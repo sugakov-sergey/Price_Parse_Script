@@ -4,6 +4,8 @@ from random import randint
 from openpyxl import load_workbook, Workbook
 from itertools import chain
 
+from openpyxl.styles import Alignment
+
 import input
 
 data, line = [], []
@@ -22,13 +24,14 @@ def load_price():
 
 def _get_filename():
     files = os.listdir('.\input')
-    return files[0]
+    url = 'input\\' + str(files[0])
+    return url
 
 def info(sheet):
     """ Информация о данных в переданном листе """
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
-    for row in sheet.iter_rows(min_row=0, max_row=10, max_col=8, values_only=True):
+    for row in sheet.iter_rows(min_row=0, max_row=10, max_col=6, values_only=True):
         print(row)
     print('...')
     print(sheet.max_row, 'строк')
@@ -139,8 +142,14 @@ def write_data_to_file(filename, data):
     for row in chain(title_table, data):
         sheet.append(row)
 
+    _cell_alignment(sheet)
+
     book.save(filename)
 
+def _cell_alignment(sheet):
+    for col in range(1, 6):
+        for row in range(1, sheet.max_row + 1):
+            sheet.cell(row=row, column=col).alignment = Alignment(horizontal='center')
 
 def _make_table_view(sheet):
     """ Настраиваем таблицу для вывода данных """
