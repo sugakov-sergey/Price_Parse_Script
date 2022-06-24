@@ -36,7 +36,7 @@ def info(sheet):
     # Список невалидных строк
     if not_valid_values:
         print('\n', '-' * 10, 'Список строк с неверными данными ', '-' * 10, '\n')
-        for i in range(min(8, len(not_valid_values))):
+        for i in range(min(5, len(not_valid_values))):
             print(not_valid_values[randint(0, len(not_valid_values) - 1)])
         print('...')
         print(len(not_valid_values), 'строк')
@@ -65,15 +65,21 @@ def clear_data(data):
         _clear_price_dis_cell(row)
         _remove_invalid_values(row)
 
+def _log_this(row, reason):
+    with open('log.txt', 'a') as f:
+        f.writelines([str(row),'\n', reason, '\n', '\n'])
+
 
 def _remove_invalid_values(row):
     global not_valid_values
     global recurring
     if not _is_valid():
         not_valid_values += [row]
+        _log_this(row, 'Invalid values')
         data.remove(row)
     elif row[0] in recurring.keys():
         recurring[row[0]] += 1
+        _log_this(row, 'Recurring values')
         data.remove(row)
     else:
         recurring[row[0]] = 0
