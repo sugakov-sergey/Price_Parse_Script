@@ -1,3 +1,4 @@
+import os
 from random import randint
 
 from openpyxl import load_workbook, Workbook
@@ -10,19 +11,24 @@ not_valid_values = []
 recurring = {}
 
 
-def load_price(filename, sheetname):
-    """ Загружаем входящий прайс для обработки """
+def load_price():
+    """ Загружаем входящий прайс для обработки.
+        Прайс должен находиться в папке .\input """
     global sheet_in
-    book_in = load_workbook(filename=filename, data_only=True)
+    book_in = load_workbook(filename=_get_filename(), data_only=True)
     print(book_in.sheetnames)
-    sheet_in = book_in[sheetname]
+    # Укажите актуальный лист
+    sheet_in = book_in[book_in.sheetnames[7]]
 
+def _get_filename():
+    files = os.listdir('.\input')
+    return files[0]
 
 def info(sheet):
     """ Информация о данных в переданном листе """
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
-    for row in sheet.iter_rows(min_row=0, max_row=30, max_col=8, values_only=True):
+    for row in sheet.iter_rows(min_row=0, max_row=10, max_col=8, values_only=True):
         print(row)
     print('...')
     print(sheet.max_row, 'строк')
@@ -49,7 +55,7 @@ def make_book(articul, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
     global data, line
     cols = [articul, title, price, price_dis, type_dis]
-    data = [[sheet_in.cell(row, col).value for col in cols] for row in range(1, sheet_in.max_row)]
+    data = [[sheet_in.cell(row, col).value for col in cols] for row in range(1, sheet_in.max_row + 1)]
 
 
 def clear_data(data):
@@ -145,7 +151,7 @@ def _make_table_view(sheet):
 
 
 # Укажите расположение прайса и название рабочего листа
-load_price(input.filename_in, input.sheetname)
+load_price()
 # Укажите номера колонок с соответствующими данными в загружаемом документе
 make_book(input.articul, input.title, input.price, input.price_dis, input.type_dis)
 clear_data(data)
