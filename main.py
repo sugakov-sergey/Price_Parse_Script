@@ -29,9 +29,13 @@ def _print_sheet_names(book_in):
         print(i, sheet)
 
 def _get_filename():
-    files = os.listdir('.\input')
-    url = 'input\\' + str(files[0])
-    return url
+    """ Возвращает путь файла, который был добавлен в папку последним """
+    files = {}
+    for file in os.listdir(r'.\input'):
+        path = os.path.abspath('input\\' + file)
+        files[path] = os.stat(path).st_mtime
+    return max(files, key=files.get)
+
 
 def info(sheet):
     """ Информация о данных в переданном листе """
