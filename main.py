@@ -13,14 +13,20 @@ not_valid_values = []
 recurring = {}
 
 
-def load_price():
+def load_price(sheet_number):
     """ Загружаем входящий прайс для обработки.
         Прайс должен находиться в папке .\input """
     global sheet_in
     book_in = load_workbook(filename=_get_filename(), data_only=True)
-    print(book_in.sheetnames)
+    _print_sheet_names(book_in)
     # Укажите актуальный лист
-    sheet_in = book_in[book_in.sheetnames[7]]
+    sheet_in = book_in[book_in.sheetnames[sheet_number]]
+
+def _print_sheet_names(book_in):
+    """ Выводим на экран все листы книги с их индексами """
+    print('\n', '-' * 12, 'Список листов с индексами', '-' * 13, '\n')
+    for i, sheet in enumerate(book_in.sheetnames):
+        print(i, sheet)
 
 def _get_filename():
     files = os.listdir('.\input')
@@ -31,7 +37,7 @@ def info(sheet):
     """ Информация о данных в переданном листе """
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
-    for row in sheet.iter_rows(min_row=0, max_row=10, max_col=6, values_only=True):
+    for row in sheet.iter_rows(min_row=0, max_row=6, max_col=6, values_only=True):
         print(row)
     print('...')
     print(sheet.max_row, 'строк')
@@ -143,8 +149,12 @@ def write_data_to_file(filename, data):
         sheet.append(row)
 
     _cell_alignment(sheet)
+    # _sort_by_discount(data)
 
     book.save(filename)
+
+# def _sort_by_discount(data):
+#     data.sort(key=lambda i: i[3])
 
 def _cell_alignment(sheet):
     for col in range(1, 6):
@@ -166,7 +176,7 @@ def _make_table_view(sheet):
 
 
 # Укажите расположение прайса и название рабочего листа
-load_price()
+load_price(input.sheet_number)
 # Укажите номера колонок с соответствующими данными в загружаемом документе
 make_book(input.articul, input.title, input.price, input.price_dis, input.type_dis)
 clear_data(data)
