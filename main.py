@@ -65,6 +65,14 @@ def info(sheet):
         print('...')
         print(sum(recurring.values()), 'строк')
 
+    # Сравнение строк до/после
+    print('\n', '-' * 14, 'Сравнение строк до/после', '-' * 14, '\n')
+    print(sheet.max_row, 'было -', len(not_valid_values), 'невалидных -',
+          sum(recurring.values()), 'дублей =', len(data), 'стало')
+    before = (sheet.max_row - len(not_valid_values) - sum(recurring.values()))
+    after = len(data)
+    print(before == after)
+
 
 def make_book(articul, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
