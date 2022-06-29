@@ -22,11 +22,13 @@ def load_price(sheet_number):
     # Укажите актуальный лист
     sheet_in = book_in[book_in.sheetnames[sheet_number]]
 
+
 def _print_sheet_names(book_in):
     """ Выводим на экран все листы книги с их индексами """
     print('\n', '-' * 12, 'Список листов с индексами', '-' * 13, '\n')
     for i, sheet in enumerate(book_in.sheetnames):
         print(i, sheet)
+
 
 def _get_filename():
     """ Возвращает путь файла, который был добавлен в папку последним """
@@ -78,9 +80,10 @@ def clear_data(data):
         _clear_price_dis_cell(row)
         _remove_invalid_values(row)
 
+
 def _log_this(row, reason):
     with open('log.txt', 'a') as f:
-        f.writelines([str(row),'\n', reason, '\n', '\n'])
+        f.writelines([str(row), '\n', reason, '\n', '\n'])
 
 
 def _remove_invalid_values(row):
@@ -148,22 +151,29 @@ def write_data_to_file(filename, data):
     book = Workbook()
     sheet = book.active
     _make_table_view(sheet)
+    _sort_by_discount(data)
 
     for row in chain(title_table, data):
         sheet.append(row)
 
     _cell_alignment(sheet)
-    # _sort_by_discount(data)
-
     book.save(filename)
 
-# def _sort_by_discount(data):
-#     data.sort(key=lambda i: i[3])
+
+def _sort_by_discount(data):
+    """ Сортирует данные по колонке 'Цена со скидкой' """
+    def nonesorter(data):
+        if not data[3]:
+            return 0
+        return data[3]
+    data.sort(key=nonesorter, reverse=True)
+
 
 def _cell_alignment(sheet):
     for col in range(1, 6):
         for row in range(1, sheet.max_row + 1):
             sheet.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+
 
 def _make_table_view(sheet):
     """ Настраиваем таблицу для вывода данных """
