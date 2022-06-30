@@ -1,9 +1,7 @@
 import os
 from random import randint
-
 from openpyxl import load_workbook, Workbook
 from itertools import chain
-
 from openpyxl.styles import Alignment
 
 import config
@@ -12,21 +10,23 @@ data, line = [], []
 not_valid_values = []
 recurring = {}
 
+def clear_temp_files():
+    """ Очистка временных файлов в начале нового цикла """
+    os.remove('log.txt')
 
 def load_price(sheet_number):
-    """ Загружаем входящий прайс для обработки.
-        Прайс должен находиться в папке input """
+    """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
     global sheet_in
     book_in = load_workbook(filename=_get_filename(), data_only=True)
     _print_sheet_names(book_in)
     # Укажите актуальный лист
-    sheet_in = book_in[book_in.sheetnames[sheet_number]]
+    sheet_in = book_in[book_in.sheetnames[sheet_number - 1]]
 
 
 def _print_sheet_names(book_in):
     """ Выводим на экран все листы книги с их индексами """
     print('\n', '-' * 12, 'Список листов с индексами', '-' * 13, '\n')
-    for i, sheet in enumerate(book_in.sheetnames):
+    for i, sheet in enumerate(book_in.sheetnames, 1):
         print(i, sheet)
 
 
@@ -197,12 +197,9 @@ def _make_table_view(sheet):
     sheet.freeze_panes = 'A2'
 
 
-# Укажите расположение прайса и название рабочего листа
+clear_temp_files()
 load_price(config.sheet_number)
-# Укажите номера колонок с соответствующими данными в загружаемом документе
 make_book(config.art, config.title, config.price, config.price_dis, config.type_dis)
 clear_data(data)
-# Укажите название создаваемого прайса
 write_data_to_file(config.filename_out, data)
-# Просмотр информации:
 info(sheet_in)
