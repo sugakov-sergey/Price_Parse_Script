@@ -9,10 +9,13 @@ import config
 data, line = [], []
 not_valid_values = []
 recurring = {}
+price_is_valid, art_is_valid = False, False
+
 
 def clear_temp_files():
     """ Очистка временных файлов в начале нового цикла """
     os.remove('log.txt')
+
 
 def load_price(sheet_number):
     """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
@@ -39,14 +42,14 @@ def _get_filename():
     return max(files, key=files.get)
 
 
-def info(sheet):
+def info():
     """ Информация о данных в переданном листе """
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
-    for row in sheet.iter_rows(min_row=0, max_row=6, max_col=6, values_only=True):
+    for row in sheet_in.iter_rows(min_row=0, max_row=6, max_col=6, values_only=True):
         print(row)
     print('...')
-    print(sheet.max_row, 'строк')
+    print(sheet_in.max_row, 'строк')
 
     # Список невалидных строк
     if not_valid_values:
@@ -67,9 +70,9 @@ def info(sheet):
 
     # Сравнение строк до/после
     print('\n', '-' * 14, 'Сравнение строк до/после', '-' * 14, '\n')
-    print(sheet.max_row, 'было -', len(not_valid_values), 'невалидных -',
+    print(sheet_in.max_row, 'было -', len(not_valid_values), 'невалидных -',
           sum(recurring.values()), 'дублей =', len(data), 'стало')
-    before = (sheet.max_row - len(not_valid_values) - sum(recurring.values()))
+    before = (sheet_in.max_row - len(not_valid_values) - sum(recurring.values()))
     after = len(data)
     print(before == after)
 
@@ -81,8 +84,8 @@ def make_book(art, title, price, price_dis, type_dis):
     data = [[sheet_in.cell(row, col).value for col in cols] for row in range(1, sheet_in.max_row + 1)]
 
 
-def clear_data(data):
-    for row in data[:]:
+def clear_data(my_data):
+    for row in my_data[:]:
         _clear_art_cell(row)
         _clear_price_cell(row)
         _clear_price_dis_cell(row)
@@ -154,27 +157,29 @@ def _is_valid():
     return all((art_is_valid, price_is_valid))
 
 
-def write_data_to_file(filename, data):
+def write_data_to_file(filename, my_data):
     """ Запись обработанных данных в файл """
     book = Workbook()
     sheet = book.active
     _make_table_view(sheet)
-    _sort_by_discount(data)
+    _sort_by_discount(my_data)
 
-    for row in chain(title_table, data):
+    for row in chain(config.title_table, my_data):
         sheet.append(row)
 
     _cell_alignment(sheet)
     book.save(filename)
 
 
-def _sort_by_discount(data):
+def _sort_by_discount(my_data):
     """ Сортирует данные по колонке 'Цена со скидкой' """
-    def nonesorter(data):
-        if not data[3]:
+
+    def none_sorter(_data):
+        if not _data[3]:
             return 0
-        return data[3]
-    data.sort(key=nonesorter, reverse=True)
+        return _data[3]
+
+    my_data.sort(key=none_sorter, reverse=True)
 
 
 def _cell_alignment(sheet):
@@ -185,8 +190,6 @@ def _cell_alignment(sheet):
 
 def _make_table_view(sheet):
     """ Настраиваем таблицу для вывода данных """
-    global title_table
-    title_table = [['Артикул', 'Наименование', 'Цена', 'Цена со скидкой', 'Тип скидки']]
     # изменяем ширину колонки
     sheet.column_dimensions['A'].width = 30  # Артикул
     sheet.column_dimensions['B'].width = 60  # Наименование
@@ -202,4 +205,4 @@ load_price(config.sheet_number)
 make_book(config.art, config.title, config.price, config.price_dis, config.type_dis)
 clear_data(data)
 write_data_to_file(config.filename_out, data)
-info(sheet_in)
+info()
