@@ -1,3 +1,4 @@
+import json
 import os
 from random import randint
 from openpyxl import load_workbook, Workbook
@@ -6,24 +7,59 @@ from openpyxl.styles import Alignment
 
 import config
 
-data, line = [], []
-not_valid_values = []
-recurring = {}
+data, line, not_valid_values = [], [], []
+recurring, brands, brand_config = {}, {}, {}
 price_is_valid, art_is_valid = False, False
+brand = ''
 
 
 def clear_temp_files():
     """ Очистка временных файлов в начале нового цикла """
-    os.remove('log.txt')
+    if os.path.exists('log.txt'):
+        os.remove('log.txt')
 
 
-def load_price(sheet_number):
-    """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
-    global sheet_in
-    book_in = load_workbook(filename=_get_filename(), data_only=True)
+def input_brand():
+    """ Получаем название бренда, по которому применяются настройки """
+    global brand
+    in_brand = input("Введите название брэнда: ")
+    brand = in_brand.strip().lower().replace(' ', '').replace('-', '')
+    _get_config(brand)
+
+
+def _get_config(brand):
+    """ Получаем конфигурацию прайса по названию бренда """
+    global brands, brand_config
+    with open('brands_config.json', 'r') as file:
+        brands = json.load(file)
+
+    if brand not in brands:
+        _add_to_config()
+    else:
+        brand_config = brands[brand]
+
+
+def _add_to_config():
+    """ Добавляем конфигурацию колонок в файл для будущего использования """
     _print_sheet_names(book_in)
+    brand_config['sheet_number'] = int(input('\nВведите номер Листа: ')) - 1
+    brand_config['art'] = int(input('Введите номер колонки Арикула: '))
+    brand_config['title'] = int(input('Введите номер колонки Наименования: '))
+    brand_config['price'] = int(input('Введите номер колонки Цена: '))
+    brand_config['price_dis'] = int(input('Введите номер колонки Цена со скидкой: '))
+    brands[brand] = brand_config
+    with open('brands_config.json', 'w') as file:
+        json.dump(brands, file)
+
+
+def load_price():
+    """ Загружаем входящий прайс для обработки.
+        Прайс должен находиться в папке input """
+    global sheet_in, book_in
+    book_in = load_workbook(filename=_get_filename(), data_only=True)
     # Укажите актуальный лист
-    sheet_in = book_in[book_in.sheetnames[sheet_number - 1]]
+    input_brand()
+    sheet_in = book_in[book_in.sheetnames[brands[brand]['sheet_number']]]
 
 
 def _print_sheet_names(book_in):
@@ -201,8 +237,9 @@ def _make_table_view(sheet):
 
 
 clear_temp_files()
-load_price(config.sheet_number)
-make_book(config.art, config.title, config.price, config.price_dis, config.type_dis)
+load_price()
+make_book(brands[brand]['art'], brands[brand]['title'],
+          brands[brand]['price'], brands[brand]['price_dis'], 100)
 clear_data(data)
 write_data_to_file(config.filename_out, data)
 info()
