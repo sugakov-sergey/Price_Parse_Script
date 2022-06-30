@@ -6,7 +6,7 @@ from itertools import chain
 
 from openpyxl.styles import Alignment
 
-import input
+import config
 
 data, line = [], []
 not_valid_values = []
@@ -15,7 +15,7 @@ recurring = {}
 
 def load_price(sheet_number):
     """ Загружаем входящий прайс для обработки.
-        Прайс должен находиться в папке .\input """
+        Прайс должен находиться в папке input """
     global sheet_in
     book_in = load_workbook(filename=_get_filename(), data_only=True)
     _print_sheet_names(book_in)
@@ -74,16 +74,16 @@ def info(sheet):
     print(before == after)
 
 
-def make_book(articul, title, price, price_dis, type_dis):
+def make_book(art, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
     global data, line
-    cols = [articul, title, price, price_dis, type_dis]
+    cols = [art, title, price, price_dis, type_dis]
     data = [[sheet_in.cell(row, col).value for col in cols] for row in range(1, sheet_in.max_row + 1)]
 
 
 def clear_data(data):
     for row in data[:]:
-        _clear_articul_cell(row)
+        _clear_art_cell(row)
         _clear_price_cell(row)
         _clear_price_dis_cell(row)
         _remove_invalid_values(row)
@@ -109,16 +109,16 @@ def _remove_invalid_values(row):
         recurring[row[0]] = 0
 
 
-def _clear_articul_cell(row):
+def _clear_art_cell(row):
     """ Форматирует ячейку с артикулом"""
-    global articul_is_valid
-    articul_is_valid = False
+    global art_is_valid
+    art_is_valid = False
     if isinstance(row[0], str):
         row[0] = row[0].strip()
-        articul_is_valid = True
+        art_is_valid = True
     elif isinstance(row[0], int | float):
         row[0] = int(row[0])
-        articul_is_valid = True
+        art_is_valid = True
 
 
 def _clear_price_cell(row):
@@ -151,7 +151,7 @@ def _clear_price_dis_cell(row):
 
 def _is_valid():
     """ Валидация данных в необходимых для загрузки ячейках """
-    return all((articul_is_valid, price_is_valid))
+    return all((art_is_valid, price_is_valid))
 
 
 def write_data_to_file(filename, data):
@@ -198,11 +198,11 @@ def _make_table_view(sheet):
 
 
 # Укажите расположение прайса и название рабочего листа
-load_price(input.sheet_number)
+load_price(config.sheet_number)
 # Укажите номера колонок с соответствующими данными в загружаемом документе
-make_book(input.articul, input.title, input.price, input.price_dis, input.type_dis)
+make_book(config.art, config.title, config.price, config.price_dis, config.type_dis)
 clear_data(data)
 # Укажите название создаваемого прайса
-write_data_to_file(input.filename_out, data)
+write_data_to_file(config.filename_out, data)
 # Просмотр информации:
 info(sheet_in)
