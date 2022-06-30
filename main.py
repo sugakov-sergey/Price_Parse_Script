@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from random import randint
 from openpyxl import load_workbook, Workbook
 from itertools import chain
@@ -10,7 +11,7 @@ import config
 data, line, not_valid_values = [], [], []
 recurring, brands, brand_config = {}, {}, {}
 price_is_valid, art_is_valid = False, False
-brand = ''
+brand, brand_price_path = '', ''
 
 
 def clear_temp_files():
@@ -195,6 +196,7 @@ def _is_valid():
 
 def write_data_to_file(filename, my_data):
     """ Запись обработанных данных в файл """
+    global brand_price_path
     book = Workbook()
     sheet = book.active
     _make_table_view(sheet)
@@ -205,6 +207,10 @@ def write_data_to_file(filename, my_data):
 
     _cell_alignment(sheet)
     book.save(filename)
+
+    # Сохраняем копию в папку output
+    brand_price_path = f'output\\{brand}-byn.xlsx'
+    shutil.copy(filename, brand_price_path)
 
 
 def _sort_by_discount(my_data):
