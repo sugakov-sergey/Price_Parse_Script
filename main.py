@@ -5,6 +5,7 @@ from random import randint
 from openpyxl import load_workbook, Workbook
 from itertools import chain
 from openpyxl.styles import Alignment
+from tqdm import tqdm
 
 import config
 
@@ -28,16 +29,16 @@ def input_brand():
     _get_config(brand)
 
 
-def _get_config(brand):
+def _get_config(brand_name: str):
     """ Получаем конфигурацию прайса по названию бренда """
     global brands, brand_config
     with open('brands_config.json', 'r') as file:
         brands = json.load(file)
 
-    if brand not in brands:
+    if brand_name not in brands:
         _add_to_config()
     else:
-        brand_config = brands[brand]
+        brand_config = brands[brand_name]
 
 
 def _add_to_config():
@@ -54,8 +55,7 @@ def _add_to_config():
 
 
 def load_price():
-    """ Загружаем входящий прайс для обработки.
-        Прайс должен находиться в папке input """
+    """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
     global sheet_in, book_in
     book_in = load_workbook(filename=_get_filename(), data_only=True)
     # Укажите актуальный лист
@@ -63,10 +63,10 @@ def load_price():
     sheet_in = book_in[book_in.sheetnames[brands[brand]['sheet_number']]]
 
 
-def _print_sheet_names(book_in):
+def _print_sheet_names(book):
     """ Выводим на экран все листы книги с их индексами """
     print('\n', '-' * 12, 'Список листов с индексами', '-' * 13, '\n')
-    for i, sheet in enumerate(book_in.sheetnames, 1):
+    for i, sheet in enumerate(book.sheetnames, 1):
         print(i, sheet)
 
 
@@ -122,19 +122,19 @@ def make_book(art, title, price, price_dis, type_dis):
 
 
 def clear_data(my_data):
-    for row in my_data[:]:
+    for row in tqdm(my_data[:], colour='yellow', desc='Обработка прайса'):
         _clear_art_cell(row)
         _clear_price_cell(row)
         _clear_price_dis_cell(row)
         _remove_invalid_values(row)
 
 
-def _log_this(row, reason):
+def _log_this(row: list, reason: str):
     with open('log.txt', 'a') as f:
         f.writelines([str(row), '\n', reason, '\n', '\n'])
 
 
-def _remove_invalid_values(row):
+def _remove_invalid_values(row: list):
     global not_valid_values
     global recurring
     if not _is_valid():
@@ -149,7 +149,7 @@ def _remove_invalid_values(row):
         recurring[row[0]] = 0
 
 
-def _clear_art_cell(row):
+def _clear_art_cell(row: list):
     """ Форматирует ячейку с артикулом"""
     global art_is_valid
     art_is_valid = False
@@ -161,7 +161,7 @@ def _clear_art_cell(row):
         art_is_valid = True
 
 
-def _clear_price_cell(row):
+def _clear_price_cell(row: list):
     """ Форматирует ячейку цены в число с двумя знаками после запятой"""
     global price_is_valid
     price_is_valid = False
@@ -176,7 +176,7 @@ def _clear_price_cell(row):
         price_is_valid = True
 
 
-def _clear_price_dis_cell(row):
+def _clear_price_dis_cell(row: list):
     """ Форматирует ячейку цены со скидкой в число с двумя знаками после запятой.
         А так же при наличии скидки, прописывает тип скидки """
     if row[3]:
