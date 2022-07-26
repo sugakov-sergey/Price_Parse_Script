@@ -24,7 +24,7 @@ def clear_temp_files():
 def input_brand():
     """ Получаем название бренда, по которому применяются настройки """
     global brand
-    in_brand = input("Введите название брэнда: ")
+    in_brand = input("Введите название брэнда (EN/RU): ")
     brand = in_brand.strip().lower().replace(' ', '').replace('-', '')
     _get_config(brand)
 
@@ -122,7 +122,10 @@ def make_book(art, title, price, price_dis, type_dis):
 
 
 def clear_data(my_data):
+    """ Чистим построчно каждую ячейку перед записью """
+    # progressbar для визуализации работы больших файлов
     for row in tqdm(my_data[:], colour='yellow', desc='Обработка прайса'):
+        print(row) # Удалить!
         _clear_art_cell(row)
         _clear_price_cell(row)
         _clear_price_dis_cell(row)
@@ -130,11 +133,13 @@ def clear_data(my_data):
 
 
 def _log_this(row: list, reason: str):
+    """ Ведем логи не вошедших строк с указанием причины """
     with open('log.txt', 'a') as f:
         f.writelines([str(row), '\n', reason, '\n', '\n'])
 
 
 def _remove_invalid_values(row: list):
+    """ Проверяем данные и удаляем невалидные """
     global not_valid_values
     global recurring
     if not _is_valid():
@@ -154,7 +159,7 @@ def _clear_art_cell(row: list):
     global art_is_valid
     art_is_valid = False
     if isinstance(row[0], str):
-        row[0] = row[0].strip()
+        row[0] = ' '.join(row[0].split())   # удаляем лишние пробелы
         art_is_valid = True
     elif isinstance(row[0], int | float):
         row[0] = int(row[0])
@@ -215,16 +220,15 @@ def write_data_to_file(filename, my_data):
 
 def _sort_by_discount(my_data):
     """ Сортирует данные по колонке 'Цена со скидкой' """
-
     def none_sorter(_data):
         if not _data[3]:
             return 0
         return _data[3]
-
     my_data.sort(key=none_sorter, reverse=True)
 
 
 def _cell_alignment(sheet):
+    """ Выравнивание данных в ячейках по центру """
     for col in range(1, 6):
         for row in range(1, sheet.max_row + 1):
             sheet.cell(row=row, column=col).alignment = Alignment(horizontal='center')
@@ -232,7 +236,7 @@ def _cell_alignment(sheet):
 
 def _make_table_view(sheet):
     """ Настраиваем таблицу для вывода данных """
-    # изменяем ширину колонки
+    # Задаем ширину колонки
     sheet.column_dimensions['A'].width = 30  # Артикул
     sheet.column_dimensions['B'].width = 60  # Наименование
     sheet.column_dimensions['C'].width = 15  # Цена
