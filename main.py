@@ -5,7 +5,8 @@ from random import randint
 from openpyxl import load_workbook, Workbook
 from itertools import chain
 from openpyxl.styles import Alignment
-from tqdm import tqdm
+from tqdm import trange, tqdm
+from transliterate import translit
 
 import config
 
@@ -13,6 +14,7 @@ data, line, not_valid_values = [], [], []
 recurring, brands, brand_config = {}, {}, {}
 price_is_valid, art_is_valid = False, False
 brand, brand_price_path = '', ''
+current_row, encode_error_values = [], []
 
 
 def clear_temp_files():
@@ -26,6 +28,7 @@ def input_brand():
     global brand
     in_brand = input("Введите название брэнда (EN/RU): ")
     brand = in_brand.strip().lower().replace(' ', '').replace('-', '')
+    brand = translit(brand, language_code='ru', reversed=True)
     _get_config(brand)
 
 
@@ -84,7 +87,10 @@ def info():
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
     for row in sheet_in.iter_rows(min_row=0, max_row=6, max_col=6, values_only=True):
-        print(row)
+        try:
+            print(row)
+        except UnicodeEncodeError:
+            print('UnicodeEncodeError')
     print('...')
     print(sheet_in.max_row, 'строк')
 
@@ -92,9 +98,20 @@ def info():
     if not_valid_values:
         print('\n', '-' * 10, 'Список строк с неверными данными ', '-' * 10, '\n')
         for i in range(min(5, len(not_valid_values))):
-            print(not_valid_values[randint(0, len(not_valid_values) - 1)])
+            try:
+                print(not_valid_values[randint(0, len(not_valid_values) - 1)])
+            except UnicodeEncodeError:
+                print('UnicodeEncodeError')
         print('...')
         print(len(not_valid_values), 'строк')
+
+    # Список строк с неверной кодировкой
+    if encode_error_values:
+        print('\n', '-' * 10, 'Список строк с неверной кодировкой ', '-' * 10, '\n')
+        for i in range(min(5, len(encode_error_values))):
+            print(encode_error_values[randint(0, len(encode_error_values) - 1)])
+        print('...')
+        print(len(encode_error_values), 'строк')
 
     # Список дублированных строк
     if sum(recurring.values()) > 0:
@@ -108,8 +125,10 @@ def info():
     # Сравнение строк до/после
     print('\n', '-' * 14, 'Сравнение строк до/после', '-' * 14, '\n')
     print(sheet_in.max_row, 'было -', len(not_valid_values), 'невалидных -',
-          sum(recurring.values()), 'дублей =', len(data), 'стало')
-    before = (sheet_in.max_row - len(not_valid_values) - sum(recurring.values()))
+          sum(recurring.values()), 'дублей -', len(encode_error_values),
+          'неверная кодировка =', len(data), 'стало')
+    before = (sheet_in.max_row - len(not_valid_values) -
+              len(encode_error_values) - sum(recurring.values()))
     after = len(data)
     print(before == after)
 
@@ -124,12 +143,22 @@ def make_book(art, title, price, price_dis, type_dis):
 def clear_data(my_data):
     """ Чистим построчно каждую ячейку перед записью """
     # progressbar для визуализации работы больших файлов
-    for row in tqdm(my_data[:], colour='yellow', desc='Обработка прайса'):
-        print(row) # Удалить!
-        _clear_art_cell(row)
-        _clear_price_cell(row)
-        _clear_price_dis_cell(row)
-        _remove_invalid_values(row)
+    global current_row, encode_error_values
+    my_data_copy = my_data[:]
+    for i in trange(len(my_data_copy), colour='yellow', desc='Обработка прайса'):
+        row = my_data_copy[i]
+        try:
+            _clear_art_cell(row)
+            _clear_price_cell(row)
+            _clear_price_dis_cell(row)
+            _remove_invalid_values(row)
+            current_row = row
+        except UnicodeEncodeError:
+            current_row = [i.encode('utf-8', 'ignore') for i in row if isinstance(i, str | int)]
+            encode_error_values += [current_row]
+            _log_this(current_row, 'UnicodeEncodeError values')
+            data.remove(row)
+            not_valid_values.pop()
 
 
 def _log_this(row: list, reason: str):
@@ -159,7 +188,7 @@ def _clear_art_cell(row: list):
     global art_is_valid
     art_is_valid = False
     if isinstance(row[0], str):
-        row[0] = ' '.join(row[0].split())   # удаляем лишние пробелы
+        row[0] = ' '.join(row[0].split())  # удаляем лишние пробелы
         art_is_valid = True
     elif isinstance(row[0], int | float):
         row[0] = int(row[0])
@@ -220,10 +249,12 @@ def write_data_to_file(filename, my_data):
 
 def _sort_by_discount(my_data):
     """ Сортирует данные по колонке 'Цена со скидкой' """
+
     def none_sorter(_data):
         if not _data[3]:
             return 0
         return _data[3]
+
     my_data.sort(key=none_sorter, reverse=True)
 
 
