@@ -276,11 +276,11 @@ def _make_table_view(sheet):
     # Фиксируем строку заголовка
     sheet.freeze_panes = 'A2'
 
-
-clear_temp_files()
-load_price()
-make_book(brands[brand]['art'], brands[brand]['title'],
-          brands[brand]['price'], brands[brand]['price_dis'], 100)
-clear_data(data)
-write_data_to_file(config.filename_out, data)
-info()
+if __name__ == "__main__":
+    clear_temp_files()
+    load_price()
+    make_book(brands[brand]['art'], brands[brand]['title'],
+              brands[brand]['price'], brands[brand]['price_dis'], 100)
+    clear_data(data)
+    write_data_to_file(config.filename_out, data)
+    info()
