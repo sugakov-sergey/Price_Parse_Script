@@ -1,7 +1,7 @@
 import os
 from openpyxl import load_workbook, Workbook
 
-from main import _sort_by_discount, _cell_alignment, _make_table_view
+from start_app import _cell_alignment, _make_table_view
 
 print("Внимание!\n"
       "Для правильного объедиения файлов прайсы должны быть обработаны \n"
@@ -46,7 +46,6 @@ def _write_data_to_file(filename, my_data):
     for row in my_data:
         sheet.append(row)
     _make_table_view(sheet)
-    # _sort_by_discount(my_data[1:])
     _cell_alignment(sheet)
     book.save(filename)
 

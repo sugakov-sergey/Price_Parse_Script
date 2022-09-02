@@ -5,10 +5,11 @@ from random import randint
 from openpyxl import load_workbook, Workbook
 from itertools import chain
 from openpyxl.styles import Alignment
-from tqdm import trange, tqdm
+from tqdm import trange
 from transliterate import translit
 
-import config
+from config import config
+from modules.logging import logging
 
 data, line, not_valid_values = [], [], []
 recurring, brands, brand_config = {}, {}, {}
@@ -17,33 +18,36 @@ brand, brand_price_path = '', ''
 current_row, encode_error_values = [], []
 
 
+@logging
 def clear_temp_files():
     """ Очистка временных файлов в начале нового цикла """
-    if os.path.exists('log.txt'):
-        os.remove('log.txt')
+    if os.path.exists('logs/invalid_values.log'):
+        os.remove('logs/invalid_values.log')
 
 
+@logging
 def input_brand():
     """ Получаем название бренда, по которому применяются настройки """
     global brand
     in_brand = input("Введите название брэнда (EN/RU): ")
     brand = in_brand.strip().lower().replace(' ', '').replace('-', '')
     brand = translit(brand, language_code='ru', reversed=True)
-    _get_config(brand)
+    _get_config()
 
 
-def _get_config(brand_name: str):
+@logging
+def _get_config():
     """ Получаем конфигурацию прайса по названию бренда """
-    global brands, brand_config
-    with open('brands_config.json', 'r') as file:
+    global brand, brands, brand_config
+    with open('config/brands_config.json', 'r') as file:
         brands = json.load(file)
-
-    if brand_name not in brands:
+    if brand not in brands:
         _add_to_config()
     else:
-        brand_config = brands[brand_name]
+        brand_config = brands[brand]
 
 
+@logging
 def _add_to_config():
     """ Добавляем конфигурацию колонок в файл для будущего использования """
     _print_sheet_names(book_in)
@@ -53,10 +57,11 @@ def _add_to_config():
     brand_config['price'] = int(input('Введите номер колонки Цена: '))
     brand_config['price_dis'] = int(input('Введите номер колонки Цена со скидкой: '))
     brands[brand] = brand_config
-    with open('brands_config.json', 'w') as file:
+    with open('config/brands_config.json', 'w') as file:
         json.dump(brands, file)
 
 
+@logging
 def load_price():
     """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
     global sheet_in, book_in
@@ -66,6 +71,7 @@ def load_price():
     sheet_in = book_in[book_in.sheetnames[brands[brand]['sheet_number']]]
 
 
+@logging
 def _print_sheet_names(book):
     """ Выводим на экран все листы книги с их индексами """
     print('\n', '-' * 12, 'Список листов с индексами', '-' * 13, '\n')
@@ -82,6 +88,7 @@ def _get_filename():
     return max(files, key=files.get)
 
 
+@logging
 def info():
     """ Информация о данных в переданном листе """
     # Структура данных
@@ -133,6 +140,7 @@ def info():
     print(before == after)
 
 
+@logging
 def make_book(art, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
     global data, line
@@ -140,6 +148,7 @@ def make_book(art, title, price, price_dis, type_dis):
     data = [[sheet_in.cell(row, col).value for col in cols] for row in range(1, sheet_in.max_row + 1)]
 
 
+@logging
 def clear_data(my_data):
     """ Чистим построчно каждую ячейку перед записью """
     # progressbar для визуализации работы больших файлов
@@ -154,19 +163,21 @@ def clear_data(my_data):
             _remove_invalid_values(row)
             current_row = row
         except UnicodeEncodeError:
-            current_row = [i.encode('utf-8', 'ignore') for i in row if isinstance(i, str | int)]
+            current_row = [i.encode('utf-8', 'ignore') for i in row if isinstance(i, str)]
             encode_error_values += [current_row]
             _log_this(current_row, 'UnicodeEncodeError values')
             data.remove(row)
             not_valid_values.pop()
 
 
+@logging
 def _log_this(row: list, reason: str):
     """ Ведем логи не вошедших строк с указанием причины """
-    with open('log.txt', 'a') as f:
+    with open('logs/invalid_values.log', 'a') as f:
         f.writelines([str(row), '\n', reason, '\n', '\n'])
 
 
+@logging
 def _remove_invalid_values(row: list):
     """ Проверяем данные и удаляем невалидные """
     global not_valid_values
@@ -183,6 +194,7 @@ def _remove_invalid_values(row: list):
         recurring[row[0]] = 0
 
 
+@logging
 def _clear_art_cell(row: list):
     """ Форматирует ячейку с артикулом"""
     global art_is_valid
@@ -195,6 +207,7 @@ def _clear_art_cell(row: list):
         art_is_valid = True
 
 
+@logging
 def _clear_price_cell(row: list):
     """ Форматирует ячейку цены в число с двумя знаками после запятой"""
     global price_is_valid
@@ -210,6 +223,7 @@ def _clear_price_cell(row: list):
         price_is_valid = True
 
 
+@logging
 def _clear_price_dis_cell(row: list):
     """ Форматирует ячейку цены со скидкой в число с двумя знаками после запятой.
         А так же при наличии скидки, прописывает тип скидки """
@@ -223,11 +237,13 @@ def _clear_price_dis_cell(row: list):
         row[4] = 'Акция'
 
 
+@logging
 def _is_valid():
     """ Валидация данных в необходимых для загрузки ячейках """
     return all((art_is_valid, price_is_valid))
 
 
+@logging
 def write_data_to_file(filename, my_data):
     """ Запись обработанных данных в файл """
     global brand_price_path
@@ -247,6 +263,7 @@ def write_data_to_file(filename, my_data):
     shutil.copy(filename, brand_price_path)
 
 
+@logging
 def _sort_by_discount(my_data):
     """ Сортирует данные по колонке 'Цена со скидкой' """
 
@@ -275,6 +292,7 @@ def _make_table_view(sheet):
     sheet.column_dimensions['E'].width = 20  # Тип скидки
     # Фиксируем строку заголовка
     sheet.freeze_panes = 'A2'
+
 
 if __name__ == "__main__":
     clear_temp_files()
