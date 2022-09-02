@@ -9,7 +9,7 @@ from tqdm import trange
 from transliterate import translit
 
 from config import config
-from modules.logging import logging
+from modules.log import logging as log
 
 data, line, not_valid_values = [], [], []
 recurring, brands, brand_config = {}, {}, {}
@@ -18,26 +18,28 @@ brand, brand_price_path = '', ''
 current_row, encode_error_values = [], []
 
 
-@logging
 def clear_temp_files():
     """ Очистка временных файлов в начале нового цикла """
+    log.info('start')
     if os.path.exists('logs/invalid_values.log'):
         os.remove('logs/invalid_values.log')
+    log.info('finish')
 
 
-@logging
 def input_brand():
     """ Получаем название бренда, по которому применяются настройки """
+    log.info('start')
     global brand
     in_brand = input("Введите название брэнда (EN/RU): ")
     brand = in_brand.strip().lower().replace(' ', '').replace('-', '')
     brand = translit(brand, language_code='ru', reversed=True)
     _get_config()
+    log.info(f'finish\n{brand}')
 
 
-@logging
 def _get_config():
     """ Получаем конфигурацию прайса по названию бренда """
+    log.info('start')
     global brand, brands, brand_config
     with open('config/brands_config.json', 'r') as file:
         brands = json.load(file)
@@ -45,11 +47,12 @@ def _get_config():
         _add_to_config()
     else:
         brand_config = brands[brand]
+    log.info(f'finish\n{brands[brand]}')
 
 
-@logging
 def _add_to_config():
     """ Добавляем конфигурацию колонок в файл для будущего использования """
+    log.info('start')
     _print_sheet_names(book_in)
     brand_config['sheet_number'] = int(input('\nВведите номер Листа: ')) - 1
     brand_config['art'] = int(input('Введите номер колонки Арикула: '))
@@ -59,38 +62,44 @@ def _add_to_config():
     brands[brand] = brand_config
     with open('config/brands_config.json', 'w') as file:
         json.dump(brands, file)
+    log.info(f'finish\n{brand_config}')
 
 
-@logging
 def load_price():
     """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
+    log.info('start')
     global sheet_in, book_in
     book_in = load_workbook(filename=_get_filename(), data_only=True)
     # Укажите актуальный лист
     input_brand()
     sheet_in = book_in[book_in.sheetnames[brands[brand]['sheet_number']]]
+    log.info('finish')
 
 
-@logging
 def _print_sheet_names(book):
+    log.info('start')
     """ Выводим на экран все листы книги с их индексами """
     print('\n', '-' * 12, 'Список листов с индексами', '-' * 13, '\n')
     for i, sheet in enumerate(book.sheetnames, 1):
         print(i, sheet)
+    log.info('finish')
 
 
 def _get_filename():
     """ Возвращает путь файла, который был добавлен в папку последним """
-    files = {}
+    log.info('start')
+    res, files = '', {}
     for file in os.listdir(r'.\input'):
         path = os.path.abspath('input\\' + file)
         files[path] = os.stat(path).st_mtime
-    return max(files, key=files.get)
+    res = max(files, key=files.get)
+    log.info(f'finish\n{res}')
+    return res
 
 
-@logging
 def info():
     """ Информация о данных в переданном листе """
+    log.info('start')
     # Структура данных
     print('\n', '-' * 12, 'Структура исходных данных', '-' * 13, '\n')
     for row in sheet_in.iter_rows(min_row=0, max_row=6, max_col=6, values_only=True):
@@ -138,20 +147,22 @@ def info():
               len(encode_error_values) - sum(recurring.values()))
     after = len(data)
     print(before == after)
+    log.info('finish')
 
 
-@logging
 def make_book(art, title, price, price_dis, type_dis):
     """ Создаем новый список строк значений в нужном порядке """
+    log.info('start')
     global data, line
     cols = [art, title, price, price_dis, type_dis]
     data = [[sheet_in.cell(row, col).value for col in cols] for row in range(1, sheet_in.max_row + 1)]
+    log.info('finish')
 
 
-@logging
 def clear_data(my_data):
     """ Чистим построчно каждую ячейку перед записью """
     # progressbar для визуализации работы больших файлов
+    log.info('start')
     global current_row, encode_error_values
     my_data_copy = my_data[:]
     for i in trange(len(my_data_copy), colour='yellow', desc='Обработка прайса'):
@@ -165,38 +176,41 @@ def clear_data(my_data):
         except UnicodeEncodeError:
             current_row = [i.encode('utf-8', 'ignore') for i in row if isinstance(i, str)]
             encode_error_values += [current_row]
-            _log_this(current_row, 'UnicodeEncodeError values')
+            _log_invalid(current_row, 'UnicodeEncodeError values')
             data.remove(row)
             not_valid_values.pop()
+    log.info(f'finish\nlen(my_data) = {len(my_data)}')
 
 
-@logging
-def _log_this(row: list, reason: str):
+def _log_invalid(row: list, reason: str):
     """ Ведем логи не вошедших строк с указанием причины """
+    log.info(f'start\n{row}')
     with open('logs/invalid_values.log', 'a') as f:
         f.writelines([str(row), '\n', reason, '\n', '\n'])
+    log.info('finish')
 
 
-@logging
 def _remove_invalid_values(row: list):
     """ Проверяем данные и удаляем невалидные """
+    log.info(f'start\n{row}')
     global not_valid_values
     global recurring
     if not _is_valid():
         not_valid_values += [row]
-        _log_this(row, 'Invalid values')
+        _log_invalid(row, 'Invalid values')
         data.remove(row)
     elif row[0] in recurring.keys():
         recurring[row[0]] += 1
-        _log_this(row, 'Recurring values')
+        _log_invalid(row, 'Recurring values')
         data.remove(row)
     else:
         recurring[row[0]] = 0
+    log.info('finish')
 
 
-@logging
 def _clear_art_cell(row: list):
     """ Форматирует ячейку с артикулом"""
+    log.info(f'start\n{row[0]}')
     global art_is_valid
     art_is_valid = False
     if isinstance(row[0], str):
@@ -205,11 +219,12 @@ def _clear_art_cell(row: list):
     elif isinstance(row[0], int | float):
         row[0] = int(row[0])
         art_is_valid = True
+    log.info(f'finish\n{row[0]}')
 
 
-@logging
 def _clear_price_cell(row: list):
     """ Форматирует ячейку цены в число с двумя знаками после запятой"""
+    log.info(f'start\n{row[2]}')
     global price_is_valid
     price_is_valid = False
     if isinstance(row[2], str):
@@ -221,12 +236,13 @@ def _clear_price_cell(row: list):
     elif isinstance(row[2], float | int) and row[2] > 0:
         row[2] = round(float(row[2]), 2)
         price_is_valid = True
+    log.info(f'finish\n{row[2]}')
 
 
-@logging
 def _clear_price_dis_cell(row: list):
     """ Форматирует ячейку цены со скидкой в число с двумя знаками после запятой.
         А так же при наличии скидки, прописывает тип скидки """
+    log.info(f'start\n{row[3]}')
     if row[3]:
         if isinstance(row[3], str):
             if set(row[3]) <= set('0123456789., '):
@@ -235,17 +251,21 @@ def _clear_price_dis_cell(row: list):
         elif isinstance(row[3], float | int):
             row[3] = round(float(row[3]), 2)
         row[4] = 'Акция'
+    log.info(f'finish\n{row[3]}')
 
 
-@logging
 def _is_valid():
     """ Валидация данных в необходимых для загрузки ячейках """
-    return all((art_is_valid, price_is_valid))
+    log.info('start')
+    res = all((art_is_valid, price_is_valid))
+    log.info(f'{res}')
+    log.info('finish')
+    return res
 
 
-@logging
 def write_data_to_file(filename, my_data):
     """ Запись обработанных данных в файл """
+    log.info(f'start\nlen(my_data) = {len(my_data)}')
     global brand_price_path
     book = Workbook()
     sheet = book.active
@@ -261,11 +281,12 @@ def write_data_to_file(filename, my_data):
     # Сохраняем копию в папку output
     brand_price_path = f'output\\{brand}-byn.xlsx'
     shutil.copy(filename, brand_price_path)
+    log.info('finish')
 
 
-@logging
 def _sort_by_discount(my_data):
     """ Сортирует данные по колонке 'Цена со скидкой' """
+    log.info(f'start\nlen(my_data) = {len(my_data)}')
 
     def none_sorter(_data):
         if not _data[3]:
@@ -273,18 +294,22 @@ def _sort_by_discount(my_data):
         return _data[3]
 
     my_data.sort(key=none_sorter, reverse=True)
+    log.info('finish')
 
 
 def _cell_alignment(sheet):
     """ Выравнивание данных в ячейках по центру """
+    log.info('start')
     for col in range(1, 6):
         for row in range(1, sheet.max_row + 1):
             sheet.cell(row=row, column=col).alignment = Alignment(horizontal='center')
+    log.info('finish')
 
 
 def _make_table_view(sheet):
     """ Настраиваем таблицу для вывода данных """
     # Задаем ширину колонки
+    log.info('start')
     sheet.column_dimensions['A'].width = 30  # Артикул
     sheet.column_dimensions['B'].width = 60  # Наименование
     sheet.column_dimensions['C'].width = 15  # Цена
@@ -292,6 +317,7 @@ def _make_table_view(sheet):
     sheet.column_dimensions['E'].width = 20  # Тип скидки
     # Фиксируем строку заголовка
     sheet.freeze_panes = 'A2'
+    log.info('finish')
 
 
 if __name__ == "__main__":
