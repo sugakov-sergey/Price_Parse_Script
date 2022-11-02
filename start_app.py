@@ -1,7 +1,9 @@
 import json
 import os
 import shutil
+import sys
 from random import randint
+import openpyxl
 from openpyxl import load_workbook, Workbook
 from itertools import chain
 from openpyxl.styles import Alignment
@@ -14,7 +16,7 @@ from modules.log import logging as log
 data, line, not_valid_values = [], [], []
 recurring, brands, brand_config = {}, {}, {}
 price_is_valid, art_is_valid = False, False
-brand, brand_price_path = '', ''
+brand, currency, brand_price_path = '', '', ''
 current_row, encode_error_values = [], []
 
 
@@ -45,6 +47,8 @@ def _get_config():
         brands = json.load(file)
     if brand not in brands:
         _add_to_config()
+    elif len(brands[brand]) < 6:
+        _add_to_config()
     else:
         brand_config = brands[brand]
     log.info(f'finish\n{brands[brand]}')
@@ -59,6 +63,7 @@ def _add_to_config():
     brand_config['title'] = int(input('Введите номер колонки Наименования: '))
     brand_config['price'] = int(input('Введите номер колонки Цена: '))
     brand_config['price_dis'] = int(input('Введите номер колонки Цена со скидкой: '))
+    brand_config['currency'] = input('Введите Валюту прайса (byn/usd/eur): ').lower()
     brands[brand] = brand_config
     with open('config/brands_config.json', 'w') as file:
         json.dump(brands, file)
@@ -69,11 +74,14 @@ def load_price():
     """ Загружаем входящий прайс для обработки. Прайс должен находиться в папке input """
     log.info('start')
     global sheet_in, book_in
-    book_in = load_workbook(filename=_get_filename(), data_only=True)
-    # Укажите актуальный лист
-    input_brand()
-    sheet_in = book_in[book_in.sheetnames[brands[brand]['sheet_number']]]
-    log.info('finish')
+    try:
+        book_in = load_workbook(filename=_get_filename(), data_only=True)
+        # Укажите актуальный лист
+        input_brand()
+        sheet_in = book_in[book_in.sheetnames[brands[brand]['sheet_number']]]
+        log.info('finish')
+    except openpyxl.utils.exceptions.InvalidFileException:
+        sys.exit("Format error. Please save price in .xlsx format and Try Again")
 
 
 def _print_sheet_names(book):
@@ -279,7 +287,9 @@ def write_data_to_file(filename, my_data):
     book.save(filename)
 
     # Сохраняем копию в папку output
-    brand_price_path = f'output\\{brand}-byn.xlsx'
+    with open('config/brands_config.json', 'r') as file:
+        brands = json.load(file)
+    brand_price_path = f'output\\{brand}-{brands[brand]["currency"]}.xlsx'
     shutil.copy(filename, brand_price_path)
     log.info('finish')
 
